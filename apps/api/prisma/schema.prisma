@@ -1,0 +1,232 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Mirrored manually in packages/shared/src/enums — keep both in sync.
+
+enum CourseFormat {
+  IN_PERSON
+  ONLINE_LIVE
+  ONLINE_SELF_PACED
+}
+
+enum EnrollmentRequestStatus {
+  PENDING
+  FORWARDED_TO_ERP
+  ACTIVE
+  REJECTED
+}
+
+enum LessonProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model Category {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique
+  name        String
+  icon        String?
+  description String?
+  courses     Course[]
+  createdAt   DateTime @default(now())
+
+  @@map("categories")
+}
+
+model Course {
+  id               String            @id @default(uuid()) @db.Uuid
+  slug             String            @unique
+  title            String
+  tagline          String?
+  description      String
+  categoryId       String?           @db.Uuid
+  category         Category?         @relation(fields: [categoryId], references: [id])
+  level            String?
+  techStack        String[]
+  objectives       String[]
+  coverImageUrl    String?
+  published        Boolean           @default(false)
+
+  // --- Ads landing page content (optional; catalog page mostly ignores these) ---
+  promoHeadline      String?
+  promoSubheadline   String?
+  heroVideoUrl       String?
+  enrolledCount      Int?
+  trustBadges        String[] @default([])
+  guaranteeText      String?
+  urgencyText        String?
+  instructorName     String?
+  instructorTitle    String?
+  instructorPhotoUrl String?
+  instructorBio      String?
+
+  offerings        CourseOffering[]
+  modules          CourseModule[]
+  testimonials     CourseTestimonial[]
+  faqItems         CourseFaqItem[]
+  enrollments      CourseEnrollment[]
+  enrollmentRequests EnrollmentRequest[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@map("courses")
+}
+
+// One priceable, schedulable variant of a course per delivery format — a
+// subject sold as a short in-person workshop and as a longer bootcamp is two
+// offerings, each with its own price and duration (matches how the market
+// actually sells training, not a single price for the whole course).
+model CourseOffering {
+  id            String       @id @default(uuid()) @db.Uuid
+  courseId      String       @db.Uuid
+  course        Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  format        CourseFormat
+  price         Int?
+  currency      String       @default("DZD")
+  durationLabel String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([courseId, format])
+  @@map("course_offerings")
+}
+
+// A module doubles as one step of the public "programme" display for every
+// format (présentiel/live/MOOC); only MOOC modules typically have lessons.
+model CourseModule {
+  id          String   @id @default(uuid()) @db.Uuid
+  courseId    String   @db.Uuid
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  orderIndex  Int
+  lessons     Lesson[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("course_modules")
+}
+
+// Social proof for the landing page — orderIndex controls display order,
+// same "omitted = appended at the end" convention as CourseModule.
+model CourseTestimonial {
+  id         String   @id @default(uuid()) @db.Uuid
+  courseId   String   @db.Uuid
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  authorName String
+  authorRole String?
+  photoUrl   String?
+  quote      String
+  rating     Int?
+  orderIndex Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("course_testimonials")
+}
+
+// Objection-handling accordion on the landing page.
+model CourseFaqItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  courseId   String   @db.Uuid
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  question   String
+  answer     String
+  orderIndex Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("course_faq_items")
+}
+
+model Lesson {
+  id         String            @id @default(uuid()) @db.Uuid
+  moduleId   String            @db.Uuid
+  module     CourseModule      @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title      String
+  content    String?
+  videoUrl   String?
+  orderIndex Int
+  progress   LessonProgress[]
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@map("lessons")
+}
+
+// Confirmed access to a course's online (self-paced) content for a student.
+model CourseEnrollment {
+  id                 String            @id @default(uuid()) @db.Uuid
+  studentId          String            @db.Uuid
+  student            StudentProfile    @relation(fields: [studentId], references: [id])
+  courseId           String            @db.Uuid
+  course             Course            @relation(fields: [courseId], references: [id])
+  enrollmentRequestId String?          @unique @db.Uuid
+  enrollmentRequest  EnrollmentRequest? @relation(fields: [enrollmentRequestId], references: [id])
+  createdAt          DateTime          @default(now())
+
+  @@unique([studentId, courseId])
+  @@map("course_enrollments")
+}
+
+model LessonProgress {
+  id          String                @id @default(uuid()) @db.Uuid
+  studentId   String                @db.Uuid
+  student     StudentProfile        @relation(fields: [studentId], references: [id])
+  lessonId    String                @db.Uuid
+  lesson      Lesson                @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  status      LessonProgressStatus  @default(NOT_STARTED)
+  completedAt DateTime?
+  updatedAt   DateTime              @updatedAt
+
+  @@unique([studentId, lessonId])
+  @@map("lesson_progress")
+}
+
+// One public form, format chosen by the visitor. in_person/online_live get
+// forwarded to RISE ERP's contact_requests; online_self_paced stays here and
+// results in a CourseEnrollment once the admin confirms.
+model EnrollmentRequest {
+  id            String                  @id @default(uuid()) @db.Uuid
+  name          String
+  email         String
+  phone         String?
+  courseId      String                  @db.Uuid
+  course        Course                  @relation(fields: [courseId], references: [id])
+  format        CourseFormat
+  message       String?
+  status        EnrollmentRequestStatus @default(PENDING)
+  courseEnrollment CourseEnrollment?
+  createdAt     DateTime                @default(now())
+
+  @@map("enrollment_requests")
+}
+
+// id must equal the corresponding auth.users.id in the riseskill Supabase project.
+model AdminProfile {
+  id        String   @id @db.Uuid
+  email     String   @unique
+  fullName  String?
+  createdAt DateTime @default(now())
+
+  @@map("admin_profiles")
+}
+
+model StudentProfile {
+  id          String             @id @db.Uuid
+  email       String             @unique
+  fullName    String?
+  enrollments CourseEnrollment[]
+  progress    LessonProgress[]
+  createdAt   DateTime           @default(now())
+
+  @@map("student_profiles")
+}
