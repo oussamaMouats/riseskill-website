@@ -15,6 +15,11 @@ FROM deps AS build
 COPY . .
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# apps/web's build script wraps `next build` with `dotenv -e ../../.env --`
+# (for local dev parity); Docker has no .env, so create an empty one — the
+# NEXT_PUBLIC_API_URL above is already in the process env via ARG/ENV and
+# dotenv-cli never overrides existing env vars, so this is a no-op for values.
+RUN touch .env
 RUN pnpm --filter @riseskill/shared run build
 RUN pnpm --filter @riseskill/web run build
 

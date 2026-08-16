@@ -38,6 +38,7 @@ import { OfferingsEditor } from "./offerings-editor";
 import { ProgrammeEditor } from "./programme-editor";
 import { TestimonialsEditor } from "./testimonials-editor";
 import { FaqEditor } from "./faq-editor";
+import { ImageUpload } from "../image-upload";
 
 const courseFormSchema = z.object({
   slug: z.string().min(1, "Le slug est requis"),
@@ -225,9 +226,12 @@ export function CourseComposer({
                   name="coverImageUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Image de couverture (URL)</FormLabel>
                       <FormControl>
-                        <Input placeholder="https://..." {...field} />
+                        <ImageUpload
+                          label="Image de couverture"
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
                       </FormControl>
                     </FormItem>
                   )}
@@ -498,9 +502,8 @@ export function CourseComposer({
                   name="instructorPhotoUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Photo (URL)</FormLabel>
                       <FormControl>
-                        <Input placeholder="https://..." {...field} />
+                        <ImageUpload label="Photo" value={field.value} onChange={field.onChange} />
                       </FormControl>
                     </FormItem>
                   )}

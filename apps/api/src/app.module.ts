@@ -13,6 +13,7 @@ import { CourseTestimonialsModule } from "./modules/course-testimonials/course-t
 import { CourseFaqModule } from "./modules/course-faq/course-faq.module";
 import { LessonsModule } from "./modules/lessons/lessons.module";
 import { EnrollmentRequestsModule } from "./modules/enrollment-requests/enrollment-requests.module";
+import { UploadsModule } from "./modules/uploads/uploads.module";
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { EnrollmentRequestsModule } from "./modules/enrollment-requests/enrollme
     CourseFaqModule,
     LessonsModule,
     EnrollmentRequestsModule,
+    UploadsModule,
   ],
 })
 export class AppModule {}

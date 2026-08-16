@@ -28,9 +28,17 @@ export function TestimonialsSection({ testimonials }: { testimonials: CourseTest
             )}
             <p className="text-sm text-slate-700">&laquo; {testimonial.quote} &raquo;</p>
             <div className="mt-3 flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-navy-50 text-xs font-semibold text-brand-navy">
-                {initials(testimonial.authorName)}
-              </div>
+              {testimonial.photoUrl ? (
+                <img
+                  src={testimonial.photoUrl}
+                  alt={testimonial.authorName}
+                  className="h-9 w-9 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-navy-50 text-xs font-semibold text-brand-navy">
+                  {initials(testimonial.authorName)}
+                </div>
+              )}
               <div>
                 <p className="text-sm font-semibold text-brand-navy">{testimonial.authorName}</p>
                 {testimonial.authorRole && (

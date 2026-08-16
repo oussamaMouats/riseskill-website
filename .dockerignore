@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/build
+**/coverage
+.git
+.env
+.env.*
+!.env.example
+*.log
+.turbo
+.DS_Store
+Thumbs.db

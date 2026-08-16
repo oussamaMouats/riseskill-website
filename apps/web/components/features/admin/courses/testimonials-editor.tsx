@@ -1,18 +1,19 @@
 "use client";
 
-import { type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Plus, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   useCourseTestimonials,
   useCreateCourseTestimonial,
   useDeleteCourseTestimonial,
 } from "@/hooks/use-course-testimonials";
+import { ImageUpload } from "../image-upload";
 
 function initials(name: string) {
   return name
@@ -27,6 +28,7 @@ export function TestimonialsEditor({ courseId }: { courseId: string }) {
   const { data: testimonials, isLoading } = useCourseTestimonials(courseId);
   const createTestimonial = useCreateCourseTestimonial(courseId);
   const deleteTestimonial = useDeleteCourseTestimonial(courseId);
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined);
 
   function handleAdd(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,11 +43,14 @@ export function TestimonialsEditor({ courseId }: { courseId: string }) {
         authorName,
         quote,
         authorRole: (formData.get("authorRole") as string) || undefined,
-        photoUrl: (formData.get("photoUrl") as string) || undefined,
+        photoUrl,
         rating: rating ? Number(rating) : undefined,
       },
       {
-        onSuccess: () => event.currentTarget?.reset(),
+        onSuccess: () => {
+          event.currentTarget?.reset();
+          setPhotoUrl(undefined);
+        },
         onError: () => toast.error("Impossible d'ajouter ce témoignage."),
       },
     );
@@ -79,6 +84,9 @@ export function TestimonialsEditor({ courseId }: { courseId: string }) {
             >
               <div className="flex items-start gap-3">
                 <Avatar className="h-9 w-9">
+                  {testimonial.photoUrl && (
+                    <AvatarImage src={testimonial.photoUrl} alt={testimonial.authorName} />
+                  )}
                   <AvatarFallback>{initials(testimonial.authorName)}</AvatarFallback>
                 </Avatar>
                 <div>
@@ -120,7 +128,7 @@ export function TestimonialsEditor({ courseId }: { courseId: string }) {
             placeholder="Note (1-5)"
             className="w-28"
           />
-          <Input name="photoUrl" placeholder="Photo (URL, optionnel)" className="w-52" />
+          <ImageUpload value={photoUrl} onChange={setPhotoUrl} />
         </div>
         <Textarea name="quote" placeholder="Le témoignage" rows={2} required />
         <Button type="submit" size="sm" disabled={createTestimonial.isPending}>
