@@ -7,8 +7,13 @@ WORKDIR /app
 FROM base AS deps
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/shared/package.json packages/shared/package.json
+COPY packages/shared/tsconfig.json packages/shared/tsconfig.json
+COPY packages/shared/tsup.config.ts packages/shared/tsup.config.ts
+COPY packages/shared/src packages/shared/src
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
+# packages/shared's "prepare" script (tsup) runs during this install, so its
+# source must already be present here.
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
